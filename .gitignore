@@ -1,16 +1,21 @@
-# v0 sandbox internal files
-__v0_runtime_loader.js
-__v0_devtools.tsx
-__v0_jsx-dev-runtime.ts
-.snowflake/
-.v0-trash/
-.vercel/
-next.user-config.*
-
-# Environment variables
-.env*.local
-
-# Common ignores
-node_modules
-.next/
+# Monorepo ignores
 .DS_Store
+
+# Frontend (Next.js)
+frontend/node_modules/
+frontend/.next/
+frontend/.vercel/
+frontend/.venv/
+frontend/.env*.local
+
+# Backend (Python)
+backend/.venv/
+backend/__pycache__/
+backend/**/*.pyc
+backend/.env
+
+# Legacy root-level ignores (if present)
+node_modules/
+.next/
+.vercel/
+.env*.local
