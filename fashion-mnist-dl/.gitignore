@@ -1,0 +1,52 @@
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Package / install artifacts
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Keras / TF model checkpoints (regenerable — do not commit)
+*.h5
+*.keras
+models/
+
+# All generated outputs (regenerable — do not commit)
+outputs/
+
+# Raw dataset (auto-downloaded by keras.datasets)
+data/raw/
+data/processed/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables / secrets
+.env
+.env.*
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/

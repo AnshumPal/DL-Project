@@ -1,0 +1,33 @@
+# environment.yml — Conda environment for Fashion-MNIST DL project
+# Create : conda env create -f environment.yml
+# Activate: conda activate fashion-mnist-dl
+# Update  : conda env update -f environment.yml --prune
+
+name: fashion-mnist-dl
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10
+  - pip
+
+  # Core scientific stack (conda-managed for binary compatibility)
+  - numpy>=1.23
+  - pandas>=1.5
+  - matplotlib>=3.6
+  - seaborn>=0.12
+  - scikit-learn>=1.2
+  - Pillow>=9.4
+  - pyyaml>=6.0
+  - ipywidgets>=8.0
+  - jupyter
+
+  # pip-only packages
+  - pip:
+    - tensorflow>=2.12.0
+    - ydata-profiling>=4.5.0
+    - pytest>=7.0
+    - black>=23.0
+    - flake8>=6.0

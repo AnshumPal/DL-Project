@@ -1,0 +1,45 @@
+# configs/config.yaml
+# Single source of truth for all hyperparameters.
+# Load in notebooks/scripts with:
+#   import yaml
+#   with open('configs/config.yaml') as f:
+#       cfg = yaml.safe_load(f)
+
+# ── Reproducibility ───────────────────────────────────────────────────────────
+seed: 42
+
+# ── Training ──────────────────────────────────────────────────────────────────
+epochs:        20
+batch_size:    64
+learning_rate: 0.01
+val_split:     0.1
+
+# ── Regularization ────────────────────────────────────────────────────────────
+dropout_rate:  0.3
+l2_lambda:     0.001
+
+# ── Dataset ───────────────────────────────────────────────────────────────────
+num_classes:   10
+image_size:    [28, 28]
+channels:      1
+
+class_names:
+  - T-shirt/top
+  - Trouser
+  - Pullover
+  - Dress
+  - Coat
+  - Sandal
+  - Shirt
+  - Sneaker
+  - Bag
+  - Ankle boot
+
+# ── Paths (relative to project root) ─────────────────────────────────────────
+paths:
+  models:   models/
+  figures:  outputs/figures/
+  reports:  outputs/reports/
+  logs:     outputs/logs/
+  data_raw: data/raw/
+  data_processed: data/processed/
