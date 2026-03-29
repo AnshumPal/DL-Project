@@ -1,74 +1,54 @@
-from __future__ import annotations
-
-from typing import Any
+import io
+import logging
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
+
+logger = logging.getLogger(__name__)
 
 
-def preprocess_image_to_model_tensor(
-    img: Image.Image, *, target_size: int = 28
-) -> tuple[np.ndarray, str]:
-    """
-    Convert an input image to a tensor suitable for a Fashion-MNIST-like model.
+def preprocess(image_bytes: bytes) -> np.ndarray:
+    try:
+        from rembg import remove
 
-    Returns:
-      (tensor, layout_hint) where layout_hint is one of: "channels_last" or "channels_first".
-    """
-    # Convert to grayscale and resize to 28x28 (Fashion MNIST size).
-    img = img.convert("L").resize((target_size, target_size))
+        # Step 1: Remove background
+        cleaned = remove(image_bytes)
+        img = Image.open(io.BytesIO(cleaned)).convert("L")
 
-    arr = np.asarray(img, dtype=np.float32)  # shape: (28, 28), range: 0..255
-    arr = arr / 255.0  # normalize to [0, 1]
+        # Step 2: Tight bounding box crop — remove empty border pixels
+        bbox = img.getbbox()
+        if bbox:
+            img = img.crop(bbox)
 
-    # Expand dims later based on model input shape; for now keep it as (28,28).
-    tensor = arr
-    return tensor, "unknown"
+        # Step 3: Pad to square BEFORE resize
+        # Without this, a tall coat (portrait shape) gets squashed
+        # horizontally when resized to 28x28 and looks like a dress
+        w, h = img.size
+        max_side = max(w, h)
+        square = Image.new("L", (max_side, max_side), 0)
+        paste_x = (max_side - w) // 2
+        paste_y = (max_side - h) // 2
+        square.paste(img, (paste_x, paste_y))
+        img = square
 
+        # Step 4: Autocontrast — stretch pixel distribution to [0, 255]
+        # Fashion-MNIST images use full contrast range
+        # Real photos often have compressed midtone distributions
+        # cutoff=2 clips the darkest and lightest 2% before stretching
+        img = ImageOps.autocontrast(img, cutoff=2)
 
-def adapt_tensor_to_model_input(
-    tensor_28x28: np.ndarray, *, model_input_shape: tuple[int, ...]
-) -> np.ndarray:
-    """
-    Adapt (28, 28) tensor to model expected shape based on `model.input_shape`.
-    """
-    # Common cases:
-    # - (None, 28, 28, 1) channels-last
-    # - (None, 1, 28, 28) channels-first
-    # - (None, 784) flattened
-    # - (None, 28, 28) without explicit channel dim (rare)
-    shape = tuple(model_input_shape)
+        logger.info("preprocess: rembg + square_pad + autocontrast applied")
 
-    # Remove leading batch dimension if present (None).
-    # We only care about remaining dims.
-    dims = shape[1:] if len(shape) >= 2 else shape
+    except Exception as e:
+        # Fallback: rembg failed — use original pipeline
+        logger.info(f"preprocess: fallback to original pipeline ({e})")
+        img = Image.open(io.BytesIO(image_bytes)).convert("L")
 
-    if len(dims) == 4:
-        # (1, 28, 28) or (28, 28, 1) patterns will show up as 3 dims after batch.
-        # But len(dims)==4 here usually means model_input_shape includes batch? keep defensive.
-        raise ValueError(f"Unexpected model input shape: {model_input_shape}")
+    # Step 5: Resize to 28x28 — same for both paths
+    img = img.resize((28, 28), Image.LANCZOS)
 
-    if len(dims) == 3:
-        # (28, 28, 1) or (1, 28, 28)
-        d0, d1, d2 = dims
-        if d0 == 28 and d1 == 28 and d2 == 1:
-            # channels-last
-            x = tensor_28x28[np.newaxis, :, :, np.newaxis]  # (1, 28, 28, 1)
-            return x
-        if d0 == 1 and d1 == 28 and d2 == 28:
-            # channels-first
-            x = tensor_28x28[np.newaxis, np.newaxis, :, :]  # (1, 1, 28, 28)
-            return x
+    # Step 6: Normalize to [0.0, 1.0] float32
+    arr = np.array(img, dtype="float32") / 255.0
 
-    if len(dims) == 2:
-        # (28, 28) without channels
-        if dims[0] == 28 and dims[1] == 28:
-            return tensor_28x28[np.newaxis, :, :]  # (1, 28, 28)
-
-    if len(dims) == 1:
-        # (784) flattened
-        if dims[0] == 28 * 28:
-            return tensor_28x28.reshape(1, 28 * 28)
-
-    raise ValueError(f"Unsupported model input shape: {model_input_shape}")
-
+    # Step 7: Add batch + channel dims for model input
+    return arr.reshape(1, 28, 28, 1)

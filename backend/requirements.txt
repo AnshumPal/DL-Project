@@ -5,3 +5,4 @@ pydantic-settings
 numpy
 pillow
 tensorflow
+rembg[cpu]>=2.0.50
