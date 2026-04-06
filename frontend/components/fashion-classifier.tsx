@@ -300,7 +300,7 @@ export function FashionClassifier() {
       formData.append("image", blob, "image.png")
 
       const controller = new AbortController()
-      const timeoutId  = setTimeout(() => controller.abort(), 15000)
+      const timeoutId  = setTimeout(() => controller.abort(), 60000)
       const response   = await fetch(`${API_BASE}/api/classify`, {
         method: "POST",
         body: formData,

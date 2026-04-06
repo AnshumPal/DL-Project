@@ -12,7 +12,7 @@ from .preprocess import preprocess
 
 
 MODEL_PATH              = os.getenv("MODEL_PATH", "model/model.keras")
-INFERENCE_TIMEOUT_SECONDS = float(os.getenv("INFERENCE_TIMEOUT_SECONDS", "10"))
+INFERENCE_TIMEOUT_SECONDS = float(os.getenv("INFERENCE_TIMEOUT_SECONDS", "60"))
 
 app = FastAPI(title="Fashion MNIST Classifier API")
 
