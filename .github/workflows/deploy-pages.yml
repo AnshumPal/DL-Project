@@ -43,7 +43,7 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_BASE_PATH: /DL-Project
-        run: npx next build --config next.config.static.mjs
+        run: cp next.config.static.mjs next.config.mjs && npx next build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
