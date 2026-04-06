@@ -42,7 +42,7 @@ jobs:
           # Set this secret in: Settings → Secrets → Actions → BACKEND_URL
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
           # GitHub Pages serves from /<repo-name>/ — set basePath accordingly
-          NEXT_PUBLIC_BASE_PATH: /DL-PROJECT-6TH-SEM
+          NEXT_PUBLIC_BASE_PATH: /DL-Project
         run: npx next build --config next.config.static.mjs
 
       - name: Upload Pages artifact
