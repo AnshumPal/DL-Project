@@ -319,11 +319,11 @@ export function FashionClassifier() {
       setTopProbs(data.top_probs ?? [])
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
-        setError("Request timed out. The backend may be slow or unreachable.")
-      } else if (err instanceof TypeError && err.message.includes("fetch")) {
-        setError("Cannot reach the backend. Make sure it's running on port 8000.")
+        setError("Request timed out. The backend may be slow — Render free tier takes ~30s to wake up. Try again.")
+      } else if (err instanceof TypeError && err.message.toLowerCase().includes("fetch")) {
+        setError("Cannot reach the backend. CORS or network error.")
       } else {
-        setError(err instanceof Error ? err.message : "Classification failed.")
+        setError(err instanceof Error ? err.message : `Classification failed. API: ${API_BASE || "(not set)"}`)
       }
     } finally {
       setIsClassifying(false)
