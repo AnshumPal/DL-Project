@@ -23,8 +23,8 @@ app.add_middleware(
     allow_origins=[
         _FRONTEND_ORIGIN,
         "http://localhost:3000",
-        # GitHub Pages origin — always allowed so static export works
         "https://itsabhi17.github.io",
+        "https://anshumpal.github.io",
     ],
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
