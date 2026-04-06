@@ -8,6 +8,9 @@ on:
       - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: read
   pages: write
@@ -38,10 +41,7 @@ jobs:
       - name: Build static export
         working-directory: frontend
         env:
-          # Point the browser-side fetch() at your deployed backend.
-          # Set this secret in: Settings → Secrets → Actions → BACKEND_URL
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
-          # GitHub Pages serves from /<repo-name>/ — set basePath accordingly
           NEXT_PUBLIC_BASE_PATH: /DL-Project
         run: npx next build --config next.config.static.mjs
 
