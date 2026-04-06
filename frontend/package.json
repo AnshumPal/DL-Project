@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:static": "next build --config next.config.static.mjs",
     "start": "next start",
     "lint": "eslint ."
   },

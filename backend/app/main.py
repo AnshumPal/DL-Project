@@ -16,9 +16,16 @@ INFERENCE_TIMEOUT_SECONDS = float(os.getenv("INFERENCE_TIMEOUT_SECONDS", "10"))
 
 app = FastAPI(title="Fashion MNIST Classifier API")
 
+_FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        _FRONTEND_ORIGIN,
+        "http://localhost:3000",
+        # GitHub Pages origin — always allowed so static export works
+        "https://itsabhi17.github.io",
+    ],
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
