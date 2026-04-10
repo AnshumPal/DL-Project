@@ -10,30 +10,44 @@ import { useIsMobile } from "@/hooks/use-mobile"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? ""
 
-const FASHION_LABELS = [
-  "T-shirt/top",
-  "Trouser",
-  "Pullover",
-  "Dress",
-  "Coat",
-  "Sandal",
-  "Shirt",
-  "Sneaker",
-  "Bag",
-  "Ankle boot",
+// ── Default labels (Fashion-MNIST) ───────────────────────────────────────────
+const DEFAULT_LABELS = [
+  "T-shirt/top", "Trouser", "Pullover", "Dress", "Coat",
+  "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot",
 ]
 
 const LABEL_ICONS: Record<string, string> = {
-  "T-shirt/top": "👕",
-  "Trouser":     "👖",
-  "Pullover":    "🧥",
-  "Dress":       "👗",
-  "Coat":        "🧥",
-  "Sandal":      "🩴",
-  "Shirt":       "👔",
-  "Sneaker":     "👟",
-  "Bag":         "👜",
-  "Ankle boot":  "🥾",
+  "T-shirt/top": "👕", "Trouser": "👖", "Pullover": "🧥",
+  "Dress": "👗",       "Coat":    "🧥", "Sandal":   "🩴",
+  "Shirt": "👔",       "Sneaker": "👟", "Bag":      "👜",
+  "Ankle boot": "🥾",
+}
+
+// ── Model metadata types ──────────────────────────────────────────────────────
+interface ModelInfo {
+  name: string
+  type: string
+  dataset: string
+  accuracy: number | null
+}
+
+interface ModelDetail {
+  model_name: string
+  input_size: number
+  input_channels: number
+  num_classes: number
+  class_names: string[]
+  dataset: string
+  accuracy: number | null
+}
+
+const MODEL_DISPLAY: Record<string, string> = {
+  fashion_mnist_cnn: "Fashion-MNIST CNN",
+  resnet50:          "ResNet-50",
+  resnet101:         "ResNet-101",
+  mobilenet_v2:      "MobileNet V2",
+  efficientnet_b0:   "EfficientNet-B0",
+  vit_b16:           "ViT-B/16",
 }
 
 interface TopProb {
@@ -45,6 +59,7 @@ interface ClassifyResponse {
   label: string
   confidence: number
   top_probs: TopProb[]
+  model_used?: string
 }
 
 // Crop rect in image-relative pixels
@@ -111,6 +126,12 @@ export function FashionClassifier() {
   const [isDragging, setIsDragging]         = useState(false)
   const [error, setError]                   = useState<string | null>(null)
 
+  // ── model state ──────────────────────────────────────────────────────────
+  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([])
+  const [selectedModel, setSelectedModel]     = useState("fashion_mnist_cnn")
+  const [modelDetail, setModelDetail]         = useState<ModelDetail | null>(null)
+  const [classLabels, setClassLabels]         = useState<string[]>(DEFAULT_LABELS)
+
   // ── guidance state ───────────────────────────────────────────────────────
   const [tipsOpen, setTipsOpen] = useState(false)
 
@@ -118,7 +139,7 @@ export function FashionClassifier() {
   const [backendReady, setBackendReady] = useState(false)
   const [backendWaking, setBackendWaking] = useState(false)
 
-  // Ping backend on mount so Render wakes up before user clicks classify
+  // Ping backend on mount + fetch available models
   useEffect(() => {
     if (!API_BASE) return
     setBackendWaking(true)
@@ -128,10 +149,28 @@ export function FashionClassifier() {
         .catch(() => null)
         .finally(() => setBackendWaking(false))
     ping()
-    // retry once after 5s in case Render is cold-starting
     const t = setTimeout(ping, 5000)
+
+    // Fetch available models
+    fetch(`${API_BASE}/api/models`, { mode: "cors" })
+      .then(r => r.json())
+      .then(d => setAvailableModels(d.models ?? []))
+      .catch(() => null)
+
     return () => clearTimeout(t)
   }, [])
+
+  // Fetch model detail when selected model changes
+  useEffect(() => {
+    if (!API_BASE) return
+    fetch(`${API_BASE}/api/model-info?model=${selectedModel}`, { mode: "cors" })
+      .then(r => r.json())
+      .then((d: ModelDetail) => {
+        setModelDetail(d)
+        setClassLabels(d.class_names ?? DEFAULT_LABELS)
+      })
+      .catch(() => setClassLabels(DEFAULT_LABELS))
+  }, [selectedModel])
 
   // ── crop state ──────────────────────────────────────────────────────────
   const [cropActive, setCropActive] = useState(false)
@@ -320,7 +359,7 @@ export function FashionClassifier() {
 
       const controller = new AbortController()
       const timeoutId  = setTimeout(() => controller.abort(), 120000)
-      const response   = await fetch(`${API_BASE}/api/classify`, {
+      const response   = await fetch(`${API_BASE}/api/classify?model=${selectedModel}`, {
         method: "POST",
         body: formData,
         signal: controller.signal,
@@ -445,6 +484,29 @@ export function FashionClassifier() {
                 {backendWaking ? "Waking up backend…" : backendReady ? "Backend ready" : "Backend offline"}
               </span>
             </div>
+          )}
+          {/* Model selector */}
+          <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+            {(availableModels.length > 0 ? availableModels : [{ name: "fashion_mnist_cnn", dataset: "Fashion-MNIST", accuracy: 0.9255, type: "keras" }]).map((m) => (
+              <button
+                key={m.name}
+                onClick={() => { setSelectedModel(m.name); setPrediction(null); setTopProbs([]) }}
+                className={`rounded-full px-3 py-1 text-xs border transition-all ${
+                  selectedModel === m.name
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "border-border text-muted-foreground hover:border-primary/50"
+                }`}
+              >
+                {MODEL_DISPLAY[m.name] ?? m.name}
+                {m.accuracy && <span className="ml-1 opacity-60">{(m.accuracy * 100).toFixed(1)}%</span>}
+              </button>
+            ))}
+          </div>
+          {/* Model info badge */}
+          {modelDetail && (
+            <p className="mt-1 text-xs text-muted-foreground/60">
+              {modelDetail.dataset} · {modelDetail.num_classes} classes · {modelDetail.input_size}×{modelDetail.input_size}px
+            </p>
           )}
         </div>
 
@@ -822,12 +884,12 @@ export function FashionClassifier() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                    {FASHION_LABELS.map((label) => (
+                    {classLabels.map((label) => (
                       <div
                         key={label}
                         className="flex flex-col items-center gap-1 rounded-lg bg-secondary/30 p-2 text-center"
                       >
-                        <span className="text-lg">{LABEL_ICONS[label]}</span>
+                        <span className="text-lg">{LABEL_ICONS[label] ?? "🏷️"}</span>
                         <span className="text-[10px] leading-tight text-muted-foreground">{label}</span>
                       </div>
                     ))}

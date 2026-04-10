@@ -1,0 +1,33 @@
+dataset:
+  root: "data/deepfashion"          # path to DeepFashion dataset
+  image_size: 224
+  num_classes: 46                   # DeepFashion category count
+  batch_size: 32
+  num_workers: 4
+  val_split: 0.15
+  test_split: 0.15
+
+training:
+  epochs: 20
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  patience: 5                       # early stopping
+  label_smoothing: 0.1
+  mixed_precision: true             # AMP for GPU efficiency
+
+models:
+  - vgg16
+  - vgg19
+  - resnet50
+  - resnet101
+  - mobilenet_v2
+  - mobilenet_v3
+  - efficientnet_b0
+  - efficientnet_b7
+  - vit_b16
+  - yolov8                          # classification mode
+
+paths:
+  checkpoints: "outputs/checkpoints"
+  plots:       "outputs/plots"
+  reports:     "outputs/reports"
