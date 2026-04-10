@@ -319,7 +319,7 @@ export function FashionClassifier() {
       formData.append("image", blob, "image.png")
 
       const controller = new AbortController()
-      const timeoutId  = setTimeout(() => controller.abort(), 60000)
+      const timeoutId  = setTimeout(() => controller.abort(), 120000)
       const response   = await fetch(`${API_BASE}/api/classify`, {
         method: "POST",
         body: formData,
@@ -338,7 +338,7 @@ export function FashionClassifier() {
       setTopProbs(data.top_probs ?? [])
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
-        setError("Request timed out. The backend may be slow — Render free tier takes ~30s to wake up. Try again.")
+        setError("Request timed out after 2 minutes. Check if the backend is running on Render.")
       } else if (err instanceof TypeError && err.message.toLowerCase().includes("fetch")) {
         setError("Cannot reach the backend. CORS or network error.")
       } else {
@@ -697,7 +697,10 @@ export function FashionClassifier() {
                         <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary/30 border-t-primary" />
                         <Sparkles className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 text-primary" />
                       </div>
-                      <p className="animate-pulse text-muted-foreground">Analyzing image...</p>
+                      <p className="animate-pulse text-muted-foreground text-sm text-center">
+                        Analyzing image…<br/>
+                        <span className="text-xs opacity-60">First request may take 20–30s on free tier</span>
+                      </p>
                     </div>
                   ) : prediction ? (
                     <div className="flex flex-col items-center gap-4 text-center">

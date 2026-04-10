@@ -4,7 +4,6 @@ import asyncio
 import logging
 import os
 
-from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -15,40 +14,32 @@ from .preprocess import preprocess
 logger = logging.getLogger(__name__)
 
 MODEL_PATH                = os.getenv("MODEL_PATH", "model/model.keras")
-INFERENCE_TIMEOUT_SECONDS = float(os.getenv("INFERENCE_TIMEOUT_SECONDS", "60"))
+INFERENCE_TIMEOUT_SECONDS = float(os.getenv("INFERENCE_TIMEOUT_SECONDS", "120"))
 
 _FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Preload model + warm up TF at startup so first request is fast."""
-    import numpy as np
-    logger.info("Startup: loading model from %s", MODEL_PATH)
-    clf = get_classifier(MODEL_PATH)
-
-    # Warm-up: run one dummy prediction to force TF to compile the graph
-    dummy = np.zeros((1, 28, 28, 1), dtype="float32")
-    loop  = asyncio.get_event_loop()
-    await loop.run_in_executor(None, clf.predict, dummy)
-    logger.info("Startup: model warm-up complete")
-    yield
-
-
-app = FastAPI(title="Fashion MNIST Classifier API", lifespan=lifespan)
+app = FastAPI(title="Fashion MNIST Classifier API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        _FRONTEND_ORIGIN,
-        "http://localhost:3000",
-        "https://itsabhi17.github.io",
-        "https://anshumpal.github.io",
-    ],
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_origins=["*"],   # open CORS — fine for a public demo
+    allow_methods=["*"],
     allow_headers=["*"],
-    allow_credentials=False,
 )
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Pre-load model on startup so first request is not slow."""
+    import numpy as np
+    try:
+        clf   = get_classifier(MODEL_PATH)
+        dummy = np.zeros((1, 28, 28, 1), dtype="float32")
+        loop  = asyncio.get_event_loop()
+        await loop.run_in_executor(None, clf.predict, dummy)
+        logger.info("Model loaded and warmed up.")
+    except Exception as e:
+        logger.warning("Startup warmup failed (non-fatal): %s", e)
 
 
 @app.get("/health")
