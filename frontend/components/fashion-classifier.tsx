@@ -122,10 +122,15 @@ export function FashionClassifier() {
   useEffect(() => {
     if (!API_BASE) return
     setBackendWaking(true)
-    fetch(`${API_BASE}/health`)
-      .then(r => r.ok ? setBackendReady(true) : null)
-      .catch(() => null)
-      .finally(() => setBackendWaking(false))
+    const ping = () =>
+      fetch(`${API_BASE}/health`, { method: "GET", mode: "cors" })
+        .then(r => { if (r.ok) setBackendReady(true) })
+        .catch(() => null)
+        .finally(() => setBackendWaking(false))
+    ping()
+    // retry once after 5s in case Render is cold-starting
+    const t = setTimeout(ping, 5000)
+    return () => clearTimeout(t)
   }, [])
 
   // ── crop state ──────────────────────────────────────────────────────────

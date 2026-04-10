@@ -45,8 +45,9 @@ app.add_middleware(
         "https://itsabhi17.github.io",
         "https://anshumpal.github.io",
     ],
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
+    allow_credentials=False,
 )
 
 
