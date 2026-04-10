@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -10,13 +12,30 @@ from fastapi.responses import JSONResponse
 from .classifier import get_classifier
 from .preprocess import preprocess
 
+logger = logging.getLogger(__name__)
 
-MODEL_PATH              = os.getenv("MODEL_PATH", "model/model.keras")
+MODEL_PATH                = os.getenv("MODEL_PATH", "model/model.keras")
 INFERENCE_TIMEOUT_SECONDS = float(os.getenv("INFERENCE_TIMEOUT_SECONDS", "60"))
 
-app = FastAPI(title="Fashion MNIST Classifier API")
-
 _FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Preload model + warm up TF at startup so first request is fast."""
+    import numpy as np
+    logger.info("Startup: loading model from %s", MODEL_PATH)
+    clf = get_classifier(MODEL_PATH)
+
+    # Warm-up: run one dummy prediction to force TF to compile the graph
+    dummy = np.zeros((1, 28, 28, 1), dtype="float32")
+    loop  = asyncio.get_event_loop()
+    await loop.run_in_executor(None, clf.predict, dummy)
+    logger.info("Startup: model warm-up complete")
+    yield
+
+
+app = FastAPI(title="Fashion MNIST Classifier API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,12 +63,10 @@ def health() -> JSONResponse:
 
 @app.post("/api/classify")
 async def classify(image: UploadFile = File(...)) -> JSONResponse:
-    # 422 is returned automatically by FastAPI when the "image" field is missing.
-    image_bytes = await image.read()
-
-    loop         = asyncio.get_event_loop()
+    image_bytes  = await image.read()
     preprocessed = preprocess(image_bytes)
 
+    loop = asyncio.get_event_loop()
     try:
         classifier = get_classifier(MODEL_PATH)
         result = await asyncio.wait_for(

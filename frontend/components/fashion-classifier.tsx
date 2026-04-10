@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -113,6 +113,20 @@ export function FashionClassifier() {
 
   // ── guidance state ───────────────────────────────────────────────────────
   const [tipsOpen, setTipsOpen] = useState(false)
+
+  // ── backend wake-up state ────────────────────────────────────────────────
+  const [backendReady, setBackendReady] = useState(false)
+  const [backendWaking, setBackendWaking] = useState(false)
+
+  // Ping backend on mount so Render wakes up before user clicks classify
+  useEffect(() => {
+    if (!API_BASE) return
+    setBackendWaking(true)
+    fetch(`${API_BASE}/health`)
+      .then(r => r.ok ? setBackendReady(true) : null)
+      .catch(() => null)
+      .finally(() => setBackendWaking(false))
+  }, [])
 
   // ── crop state ──────────────────────────────────────────────────────────
   const [cropActive, setCropActive] = useState(false)
@@ -418,6 +432,15 @@ export function FashionClassifier() {
           <p className="text-muted-foreground">
             Upload a clothing image and let AI identify the category
           </p>
+          {/* Backend status pill */}
+          {API_BASE && (
+            <div className="mt-2 flex items-center justify-center gap-1.5 text-xs">
+              <span className={`h-2 w-2 rounded-full ${backendWaking ? "bg-yellow-400 animate-pulse" : backendReady ? "bg-emerald-400" : "bg-zinc-500"}`} />
+              <span className="text-muted-foreground">
+                {backendWaking ? "Waking up backend…" : backendReady ? "Backend ready" : "Backend offline"}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
